@@ -3,8 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"os/exec"
-	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -33,14 +31,8 @@ func InitModel() Model {
 		log.Panicf("Error: %v\n", err)
 	}
 
-	path, err := filepath.Abs(fi.Name())
-	if err != nil {
-		log.Panicf("Error: %v\n", err)
-	}
-
 	root := Dirent{
-		Path:     path,
-		IsDir:    fi.IsDir(),
+		fi:       fi,
 		Level:    0,
 		Expanded: true,
 	}
@@ -78,7 +70,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					log.Printf("top of root; doing nothing...\n")
 					break
 				}
-				log.Printf("moving out of %v to %v\n", m.currentCursorDir.Path, m.currentCursorDir.Parent.Path)
+				log.Printf("moving out of %v to %v\n", m.currentCursorDir.Path(), m.currentCursorDir.Parent.Path())
 				m.cursor = m.currentCursorDir.PosInParent
 				m.currentCursorDir = m.currentCursorDir.Parent
 				log.Printf("new cursor: %v\n", m.cursor)
@@ -87,8 +79,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// case 2: move within from the next dirent it's pointing to
 			direntAboveCurrent := m.currentCursorDir.Dirents[m.cursor-1]
-			if direntAboveCurrent.IsDir && direntAboveCurrent.Expanded {
-				log.Printf("moving in to %v; cursor new: %v\n", direntAboveCurrent.Path, len(direntAboveCurrent.Dirents)-1)
+			if direntAboveCurrent.IsDir() && direntAboveCurrent.Expanded {
+				log.Printf("moving in to %v; cursor new: %v\n", direntAboveCurrent.Path(), len(direntAboveCurrent.Dirents)-1)
 				m.cursor = len(m.currentCursorDir.Dirents) - 1
 				m.currentCursorDir = &m.currentCursorDir.Dirents[m.cursor-1]
 				break
@@ -98,7 +90,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		case "down", "j":
 			// case 1: move in; cursor moves from parent -> an expanded subdir -- when the cursor is at the subdir
-			if m.getCurrentDirent().IsDir && m.getCurrentDirent().Expanded {
+			if m.getCurrentDirent().IsDir() && m.getCurrentDirent().Expanded {
 				m.currentCursorDir = m.getCurrentDirent()
 				m.cursor = 0
 				// log.Printf("current cursor dir: %v, cursor: %v", m.currentCursorDir, m.cursor)
@@ -120,22 +112,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// case 3: move within
 			m.cursor++
-		case "enter":
+		case "enter", "right", "l": // expand directory
 			currentDirent := m.getCurrentDirent()
-			if currentDirent.IsDir {
+			if currentDirent.IsDir() {
 				// Expand directory
 				currentDirent.Expanded = !currentDirent.Expanded
 				// load the directory entries for the current directory
 				if currentDirent.Expanded && len(currentDirent.Dirents) == 0 {
 					currentDirent.LoadDirents()
 				}
-			} else {
-				// Open file with the default $EDITOR
-				editor := os.Getenv("EDITOR")
-				if editor == "" {
-					editor = "vi"
-				}
-				c := exec.Command(editor, m.getCurrentDirent().Path)
+			}
+		case "e": // open file with $EDITOR
+			if m.getCurrentDirent().IsFile() {
+				c := EditorOpenFile(m.getCurrentDirent().Path())
 				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
 					return nil
 				})
@@ -143,7 +132,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
-	log.Printf("current cursor dir: %v, cursor: %v; direntpath: %v\n", m.currentCursorDir.Path, m.cursor, m.getCurrentDirent().Path)
+	log.Printf("current cursor dir: %v, cursor: %v; direntpath: %v\n", m.currentCursorDir.Path(), m.cursor, m.getCurrentDirent().Path())
 	return m, nil
 }
 
