@@ -4,13 +4,15 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type Model struct {
-	cursor int 
-	root   Dirent
+	cursor           int
+	currentCursorDir *Dirent
+	root             Dirent
 }
 
 func (m Model) Init() tea.Cmd {
@@ -31,18 +33,36 @@ func InitModel() Model {
 		log.Panicf("Error: %v\n", err)
 	}
 
+	path, err := filepath.Abs(fi.Name())
+	if err != nil {
+		log.Panicf("Error: %v\n", err)
+	}
+
 	root := Dirent{
-		Path:  fi.Name(),
-		IsDir: fi.IsDir(),
-		Level: 0,
-		Expanded:  true,
+		Path:     path,
+		IsDir:    fi.IsDir(),
+		Level:    0,
+		Expanded: true,
 	}
 	root.LoadDirents()
 
 	return Model{
-		cursor: 0,
-		root:   root,
+		currentCursorDir: &root,
+		cursor:           0,
+		root:             root,
 	}
+}
+
+func (m Model) getCurrentDirent() *Dirent {
+	return &m.currentCursorDir.Dirents[m.cursor]
+}
+
+func (m Model) cursorBottomCurrentDir() bool {
+	return m.cursor == len(m.currentCursorDir.Dirents)-1
+}
+
+func (m Model) cursorTopCurrentDir() bool {
+	return m.cursor == 0
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -52,24 +72,70 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
 		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
+			// case 1: move out from top of subdir
+			if m.cursorTopCurrentDir() {
+				if m.currentCursorDir.Parent == nil {
+					log.Printf("top of root; doing nothing...\n")
+					break
+				}
+				log.Printf("moving out of %v to %v\n", m.currentCursorDir.Path, m.currentCursorDir.Parent.Path)
+				m.cursor = m.currentCursorDir.PosInParent
+				m.currentCursorDir = m.currentCursorDir.Parent
+				log.Printf("new cursor: %v\n", m.cursor)
+				break
 			}
+
+			// case 2: move within from the next dirent it's pointing to
+			direntAboveCurrent := m.currentCursorDir.Dirents[m.cursor-1]
+			if direntAboveCurrent.IsDir && direntAboveCurrent.Expanded {
+				log.Printf("moving in to %v; cursor new: %v\n", direntAboveCurrent.Path, len(direntAboveCurrent.Dirents)-1)
+				m.cursor = len(m.currentCursorDir.Dirents) - 1
+				m.currentCursorDir = &m.currentCursorDir.Dirents[m.cursor-1]
+				break
+			}
+
+			// in middle of the current directory
+			m.cursor--
 		case "down", "j":
-			if m.cursor < len(m.root.Dirents)-1 {
-				m.cursor++
+			// case 1: move in; cursor moves from parent -> an expanded subdir -- when the cursor is at the subdir
+			if m.getCurrentDirent().IsDir && m.getCurrentDirent().Expanded {
+				m.currentCursorDir = m.getCurrentDirent()
+				m.cursor = 0
+				// log.Printf("current cursor dir: %v, cursor: %v", m.currentCursorDir, m.cursor)
+				break
 			}
+
+			// case 2: move out; of a subdir to the parent -- when the cursor is at the bottom of the subdir
+			if m.cursorBottomCurrentDir() {
+				// if there's no parent to move out to i.e you're the bottom dirent from the root, do nothing
+				// TODO: cache this getBottomDirent() call
+				if m.root.getBottomDirent().Equals(*m.getCurrentDirent()) {
+					break
+				}
+				// there's a parent so move out
+				m.cursor = m.currentCursorDir.PosInParent
+				m.currentCursorDir = m.currentCursorDir.Parent
+				break
+			}
+
+			// case 3: move within
+			m.cursor++
 		case "enter":
-			if m.root.Dirents[m.cursor].IsDir {
+			currentDirent := m.getCurrentDirent()
+			if currentDirent.IsDir {
 				// Expand directory
-        m.root.Dirents[m.cursor].Expanded = !m.root.Dirents[m.cursor].Expanded
+				currentDirent.Expanded = !currentDirent.Expanded
+				// load the directory entries for the current directory
+				if currentDirent.Expanded && len(currentDirent.Dirents) == 0 {
+					currentDirent.LoadDirents()
+				}
 			} else {
 				// Open file with the default $EDITOR
 				editor := os.Getenv("EDITOR")
 				if editor == "" {
 					editor = "vi"
 				}
-				c := exec.Command(editor, m.root.Dirents[m.cursor].Path)
+				c := exec.Command(editor, m.getCurrentDirent().Path)
 				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
 					return nil
 				})
@@ -77,9 +143,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
+	log.Printf("current cursor dir: %v, cursor: %v; direntpath: %v\n", m.currentCursorDir.Path, m.cursor, m.getCurrentDirent().Path)
 	return m, nil
 }
 
 func (m Model) View() string {
-  return m.root.Print(m.cursor)
+	return m.root.Print(m)
 }
