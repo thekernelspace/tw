@@ -9,6 +9,7 @@ type Dirent struct {
 	Path    string
 	IsDir   bool
 	Dirents []Dirent
+	Level   uint // the level of the dirent in the tree; 0 = root, and so on
 }
 
 // if the dirent is a directory, return the directory entries
@@ -32,8 +33,7 @@ func (d *Dirent) LoadDirents() {
 		d.Dirents = append(d.Dirents, Dirent{
 			Path:  fi.Name(),
 			IsDir: fi.IsDir(),
+      Level: d.Level + 1,
 		})
 	}
 }
-
-

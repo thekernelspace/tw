@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 
@@ -21,16 +22,14 @@ func initModel() Model {
 	// get the directory entries for the current directory
 	dir, err := os.Open(".")
 	if err != nil {
-		fmt.Printf("Error: %v", err)
-		os.Exit(1)
+		log.Fatalf("Error: %v", err)
 	}
 
 	defer dir.Close()
 
 	fi, err := dir.Stat()
 	if err != nil {
-		fmt.Printf("Error: %v", err)
-		os.Exit(1)
+		log.Fatalf("Error: %v", err)
 	}
 
 	root := Dirent{
@@ -88,11 +87,11 @@ func (m Model) View() string {
 			cursor = ">"
 		}
 		// Render the dirent
-		endingSlash := ""
-		if dirent.IsDir {
-			endingSlash = "/"
-		}
-		s += fmt.Sprintf("%s%s%s\n", cursor, dirent.Path, endingSlash)
+    pathname := dirent.Path
+    if dirent.IsDir {
+      pathname += "/"
+    }
+		s += fmt.Sprintf("%s%s\n", cursor, pathname)
 	}
 	return s
 }
