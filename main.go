@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,9 +9,9 @@ import (
 
 
 func main() {
-	p := tea.NewProgram(initModel())
+	p := tea.NewProgram(InitModel())
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error: %v", err)
+		log.Panicf("Error: %v\n", err)
 		os.Exit(1)
 	}
 }

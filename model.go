@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -10,7 +9,7 @@ import (
 )
 
 type Model struct {
-	cursor int
+	cursor int 
 	root   Dirent
 }
 
@@ -18,23 +17,25 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func initModel() Model {
+func InitModel() Model {
 	// get the directory entries for the current directory
 	dir, err := os.Open(".")
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Panicf("Error: %v\n", err)
 	}
 
 	defer dir.Close()
 
 	fi, err := dir.Stat()
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Panicf("Error: %v\n", err)
 	}
 
 	root := Dirent{
 		Path:  fi.Name(),
 		IsDir: fi.IsDir(),
+		Level: 0,
+		Expanded:  true,
 	}
 	root.LoadDirents()
 
@@ -61,6 +62,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.root.Dirents[m.cursor].IsDir {
 				// Expand directory
+        m.root.Dirents[m.cursor].Expanded = !m.root.Dirents[m.cursor].Expanded
 			} else {
 				// Open file with the default $EDITOR
 				editor := os.Getenv("EDITOR")
@@ -79,20 +81,5 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	s := ""
-	for i, dirent := range m.root.Dirents {
-		cursor := " "
-		if i == m.cursor {
-			// Highlight the cursor
-			cursor = ">"
-		}
-		// Render the dirent
-    pathname := dirent.Path
-    if dirent.IsDir {
-      pathname += "/"
-    }
-		s += fmt.Sprintf("%s%s\n", cursor, pathname)
-	}
-	return s
+  return m.root.Print(m.cursor)
 }
-
