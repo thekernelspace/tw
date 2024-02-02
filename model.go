@@ -64,55 +64,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
 		case "up", "k":
-			// case 1: move out from top of subdir
-			if m.cursorTopCurrentDir() {
-				if m.currentCursorDir.Parent == nil {
-					log.Printf("top of root; doing nothing...\n")
-					break
-				}
-				log.Printf("moving out of %v to %v\n", m.currentCursorDir.Path(), m.currentCursorDir.Parent.Path())
-				m.cursor = m.currentCursorDir.PosInParent
-				m.currentCursorDir = m.currentCursorDir.Parent
-				log.Printf("new cursor: %v\n", m.cursor)
-				break
-			}
-
-			// case 2: move within from the next dirent it's pointing to
-			direntAboveCurrent := m.currentCursorDir.Dirents[m.cursor-1]
-			if direntAboveCurrent.IsDir() && direntAboveCurrent.Expanded {
-				log.Printf("moving in to %v; cursor new: %v\n", direntAboveCurrent.Path(), len(direntAboveCurrent.Dirents)-1)
-				m.cursor = len(direntAboveCurrent.Dirents) - 1
-				m.currentCursorDir = &direntAboveCurrent
-				break
-			}
-
-			// in middle of the current directory
-			m.cursor--
+			m.HandleMoveUp()
 		case "down", "j":
-			// case 1: move in; cursor moves from parent -> an expanded subdir -- when the cursor is at the subdir
-			if m.getCurrentDirent().IsDir() && m.getCurrentDirent().Expanded {
-				m.currentCursorDir = m.getCurrentDirent()
-				m.cursor = 0
-				// log.Printf("current cursor dir: %v, cursor: %v", m.currentCursorDir, m.cursor)
-				break
-			}
-
-			// case 2: move out; of a subdir to the parent -- when the cursor is at the bottom of the subdir
-			if m.cursorBottomCurrentDir() {
-				// if there's no parent to move out to i.e you're the bottom dirent from the root, do nothing
-				// TODO: cache this getBottomDirent() call
-				if m.root.getBottomDirent().Equals(*m.getCurrentDirent()) {
-					log.Println("bottom of root; doing nothing...")
-					break
-				}
-				// there's a parent so move out
-				m.cursor = m.currentCursorDir.PosInParent + 1
-				m.currentCursorDir = m.currentCursorDir.Parent
-				break
-			}
-
-			// case 3: move within
-			m.cursor++
+      m.HandleMoveDown()
 		case "enter", "right", "l": // expand directory if l or right, or toggle if enter; open file if file
 			currentDirent := m.getCurrentDirent()
 			if currentDirent.IsDir() {
@@ -122,14 +76,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if currentDirent.Expanded && len(currentDirent.Dirents) == 0 {
 					currentDirent.LoadDirents()
 				}
-			} else if currentDirent.IsFile() {
-				// open file with $EDITOR
-				c := EditorOpenFile(currentDirent.Path())
-				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
-					return nil
-				})
-				return m, cmd
-			}
+			} else if currentDirent.IsFile() && msg.String() == "enter" {
+        // only enter opens file
+        c := EditorOpenFile(currentDirent.Path())
+        cmd := tea.ExecProcess(c, func(err error) tea.Msg {
+          return nil
+        })
+        return m, cmd
+      }
 		case "left", "h": // collapse directory
 			currentDirent := m.getCurrentDirent()
 			if currentDirent.IsDir() && currentDirent.Expanded {
@@ -147,6 +101,60 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	log.Printf("current cursor dir: %v, cursor: %v; direntpath: %v\n", m.currentCursorDir.Path(), m.cursor, m.getCurrentDirent().Path())
 	return m, nil
+}
+
+func (m *Model) HandleMoveUp() {
+	// case 1: move out from top of subdir
+	if m.cursorTopCurrentDir() {
+		if m.currentCursorDir.Parent == nil {
+			log.Printf("top of root; doing nothing...\n")
+			return
+		}
+		log.Printf("moving out of %v to %v\n", m.currentCursorDir.Path(), m.currentCursorDir.Parent.Path())
+		m.cursor = m.currentCursorDir.PosInParent
+		m.currentCursorDir = m.currentCursorDir.Parent
+		log.Printf("new cursor: %v\n", m.cursor)
+		return
+	}
+
+	// case 2: move within from the next dirent it's pointing to
+	direntAboveCurrent := m.currentCursorDir.Dirents[m.cursor-1]
+	if direntAboveCurrent.IsDir() && direntAboveCurrent.Expanded {
+		log.Printf("moving in to %v; cursor new: %v\n", direntAboveCurrent.Path(), len(direntAboveCurrent.Dirents)-1)
+		m.cursor = len(direntAboveCurrent.Dirents) - 1
+		m.currentCursorDir = &direntAboveCurrent
+		return
+	}
+
+	// in middle of the current directory
+	m.cursor--
+}
+
+func (m *Model) HandleMoveDown() {
+	// case 1: move in; cursor moves from parent -> an expanded subdir -- when the cursor is at the subdir
+	if m.getCurrentDirent().IsDir() && m.getCurrentDirent().Expanded {
+		m.currentCursorDir = m.getCurrentDirent()
+		m.cursor = 0
+		// log.Printf("current cursor dir: %v, cursor: %v", m.currentCursorDir, m.cursor)
+		return
+	}
+
+	// case 2: move out; of a subdir to the parent -- when the cursor is at the bottom of the subdir
+	if m.cursorBottomCurrentDir() {
+		// if there's no parent to move out to i.e you're the bottom dirent from the root, do nothing
+		// TODO: cache this getBottomDirent() call
+		if m.root.getBottomDirent().Equals(*m.getCurrentDirent()) {
+			log.Println("bottom of root; doing nothing...")
+			return
+		}
+		// there's a parent so move out
+		m.cursor = m.currentCursorDir.PosInParent + 1
+		m.currentCursorDir = m.currentCursorDir.Parent
+		return
+	}
+
+	// case 3: move within
+	m.cursor++
 }
 
 func (m Model) View() string {

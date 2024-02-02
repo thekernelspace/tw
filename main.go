@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -20,7 +20,7 @@ func main() {
 		log.SetOutput(f)
 		log.Println("Debug mode enabled")
 	} else {
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 	}
 
 	p := tea.NewProgram(InitModel())

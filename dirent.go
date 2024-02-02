@@ -6,7 +6,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
 )
+
 
 type Dirent struct {
 	fi          fs.FileInfo
@@ -88,9 +90,9 @@ func (d Dirent) Print(state Model) string {
 		}
 		cursorDisplay := " "
 		if state.getCurrentDirent().Equals(dirent) {
-			cursorDisplay = ">"
+			cursorDisplay = teal.Render(">")
 		}
-		s += fmt.Sprintf("%s%s%s", cursorDisplay, prefixspace, pathname)
+		s += fmt.Sprintf("%s %s%s", cursorDisplay, prefixspace, pathname)
 		if i < len(d.Dirents)-1 {
 			s += "\n"
 		}
