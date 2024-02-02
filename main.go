@@ -1,13 +1,14 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const DEBUG = true
+var DEBUG = os.Getenv("DEBUG") != ""
 
 func main() {
 	if DEBUG {
@@ -17,6 +18,9 @@ func main() {
 		}
 		defer f.Close()
 		log.SetOutput(f)
+		log.Println("Debug mode enabled")
+	} else {
+		log.SetOutput(ioutil.Discard)
 	}
 
 	p := tea.NewProgram(InitModel())

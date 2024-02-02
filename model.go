@@ -81,8 +81,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			direntAboveCurrent := m.currentCursorDir.Dirents[m.cursor-1]
 			if direntAboveCurrent.IsDir() && direntAboveCurrent.Expanded {
 				log.Printf("moving in to %v; cursor new: %v\n", direntAboveCurrent.Path(), len(direntAboveCurrent.Dirents)-1)
-				m.cursor = len(m.currentCursorDir.Dirents) - 1
-				m.currentCursorDir = &m.currentCursorDir.Dirents[m.cursor-1]
+				m.cursor = len(direntAboveCurrent.Dirents) - 1
+				m.currentCursorDir = &direntAboveCurrent
 				break
 			}
 
@@ -102,17 +102,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// if there's no parent to move out to i.e you're the bottom dirent from the root, do nothing
 				// TODO: cache this getBottomDirent() call
 				if m.root.getBottomDirent().Equals(*m.getCurrentDirent()) {
+					log.Println("bottom of root; doing nothing...")
 					break
 				}
 				// there's a parent so move out
-				m.cursor = m.currentCursorDir.PosInParent
+				m.cursor = m.currentCursorDir.PosInParent + 1
 				m.currentCursorDir = m.currentCursorDir.Parent
 				break
 			}
 
 			// case 3: move within
 			m.cursor++
-		case "enter", "right", "l": // expand directory
+		case "enter", "right", "l": // expand directory if l or right, or toggle if enter; open file if file
 			currentDirent := m.getCurrentDirent()
 			if currentDirent.IsDir() {
 				// Expand directory
@@ -121,8 +122,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if currentDirent.Expanded && len(currentDirent.Dirents) == 0 {
 					currentDirent.LoadDirents()
 				}
+			} else if currentDirent.IsFile() {
+				// open file with $EDITOR
+				c := EditorOpenFile(currentDirent.Path())
+				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
+					return nil
+				})
+				return m, cmd
 			}
-		case "e": // open file with $EDITOR
+		case "left", "h": // collapse directory
+			currentDirent := m.getCurrentDirent()
+			if currentDirent.IsDir() && currentDirent.Expanded {
+				currentDirent.Expanded = false
+			}
+		case "e": // open file with $EDITOR; ignore if it's a directory
 			if m.getCurrentDirent().IsFile() {
 				c := EditorOpenFile(m.getCurrentDirent().Path())
 				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
