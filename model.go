@@ -110,7 +110,7 @@ func (m *Model) HandleMoveUp() {
 			log.Printf("top of root; doing nothing...\n")
 			return
 		}
-		log.Printf("moving out of %v to %v\n", m.currentCursorDir.Path(), m.currentCursorDir.Parent.Path())
+		log.Printf("moving out of %v to %v on pos %v\n", m.currentCursorDir.Path(), m.currentCursorDir.Parent.Path(), m.currentCursorDir.PosInParent)
 		m.cursor = m.currentCursorDir.PosInParent
 		m.currentCursorDir = m.currentCursorDir.Parent
 		log.Printf("new cursor: %v\n", m.cursor)

@@ -66,7 +66,28 @@ func (d *Dirent) LoadDirents() {
 			Expanded:    false, // don't show by default
 		})
 	}
+
+	// folders first then files
+	d.Dirents = sortDirents(d.Dirents)
+
 	log.Printf("Loaded %d dirents for %s\n", len(d.Dirents), d.Path())
+}
+
+func sortDirents(dirents []Dirent) []Dirent {
+	var dirs []Dirent
+	var files []Dirent
+	for _, dirent := range dirents {
+		if dirent.IsDir() {
+			dirs = append(dirs, dirent)
+		} else {
+			files = append(files, dirent)
+		}
+	}
+	finalDirs := append(dirs, files...)
+	for i := range finalDirs {
+		finalDirs[i].PosInParent = i
+	}
+	return finalDirs
 }
 
 func (d Dirent) Print(state Model) string {
