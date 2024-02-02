@@ -66,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "k":
 			m.HandleMoveUp()
 		case "down", "j":
-      m.HandleMoveDown()
+			m.HandleMoveDown()
 		case "enter", "right", "l": // expand directory if l or right, or toggle if enter; open file if file
 			currentDirent := m.getCurrentDirent()
 			if currentDirent.IsDir() {
@@ -77,13 +77,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					currentDirent.LoadDirents()
 				}
 			} else if currentDirent.IsFile() && msg.String() == "enter" {
-        // only enter opens file
-        c := EditorOpenFile(currentDirent.Path())
-        cmd := tea.ExecProcess(c, func(err error) tea.Msg {
-          return nil
-        })
-        return m, cmd
-      }
+				// only enter opens file
+				c := EditorOpenFile(currentDirent.Path())
+				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
+					return nil
+				})
+				return m, cmd
+			}
 		case "left", "h": // collapse directory
 			currentDirent := m.getCurrentDirent()
 			if currentDirent.IsDir() && currentDirent.Expanded {

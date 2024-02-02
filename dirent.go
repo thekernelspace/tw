@@ -6,9 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-
 )
-
 
 type Dirent struct {
 	fi          fs.FileInfo
@@ -81,8 +79,9 @@ func (d Dirent) Print(state Model) string {
 			pathname += "/"
 		}
 		// load the children in case the dirent is expanded
+		subdirtree := ""
 		if dirent.Expanded {
-			pathname += "\n" + dirent.Print(state)
+			subdirtree += "\n" + dirent.Print(state)
 		}
 		prefixspace := ""
 		for j := uint(1); j < dirent.Level; j++ {
@@ -91,8 +90,9 @@ func (d Dirent) Print(state Model) string {
 		cursorDisplay := " "
 		if state.getCurrentDirent().Equals(dirent) {
 			cursorDisplay = teal.Render(">")
+			pathname = teal.Render(pathname)
 		}
-		s += fmt.Sprintf("%s %s%s", cursorDisplay, prefixspace, pathname)
+		s += fmt.Sprintf("%s %s%s%s", cursorDisplay, prefixspace, pathname, subdirtree)
 		if i < len(d.Dirents)-1 {
 			s += "\n"
 		}
