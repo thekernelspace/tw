@@ -107,7 +107,8 @@ func (m *Model) HandleMoveUp() {
 	// case 1: move out from top of subdir
 	if m.cursorTopCurrentDir() {
 		if m.currentCursorDir.Parent == nil {
-			log.Printf("top of root; doing nothing...\n")
+			log.Printf("top of root; going to bottom...\n")
+			m.cursor = len(m.currentCursorDir.Dirents) - 1
 			return
 		}
 		log.Printf("moving out of %v to %v on pos %v\n", m.currentCursorDir.Path(), m.currentCursorDir.Parent.Path(), m.currentCursorDir.PosInParent)
@@ -144,7 +145,8 @@ func (m *Model) HandleMoveDown() {
 		// if there's no parent to move out to i.e you're the bottom dirent from the root, do nothing
 		// TODO: cache this getBottomDirent() call
 		if m.root.getBottomDirent().Equals(*m.getCurrentDirent()) {
-			log.Println("bottom of root; doing nothing...")
+			log.Println("bottom of root; going to top...")
+			m.cursor = 0
 			return
 		}
 		// there's a parent so move out
