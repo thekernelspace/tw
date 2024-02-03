@@ -2,7 +2,7 @@
 
 A fast and friendly file/directory navigator
 
-<a href="https://asciinema.org/a/BoqTLeCCmVGCXm07wgq5q3usl" target="_blank"><img src="https://asciinema.org/a/BoqTLeCCmVGCXm07wgq5q3usl.svg" /></a>
+[preview](./assets/preview.gif) 
 
 ## Features
 - **All-in-one tree view**: subdirectories and files are shown in a tree format (a la your typical `tree` command). You can expand / collapse subdirectories and get to your file quickly
