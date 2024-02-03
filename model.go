@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"os"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -18,19 +18,7 @@ func (m Model) Init() tea.Cmd {
 }
 
 func InitModel() Model {
-	// get the directory entries for the current directory
-	dir, err := os.Open(".")
-	if err != nil {
-		log.Panicf("Error: %v\n", err)
-	}
-
-	defer dir.Close()
-
-	fi, err := dir.Stat()
-	if err != nil {
-		log.Panicf("Error: %v\n", err)
-	}
-
+	fi := getFi(".")
 	root := Dirent{
 		fi:       fi,
 		Level:    0,
@@ -60,47 +48,70 @@ func (m Model) cursorTopCurrentDir() bool {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		switch {
+		case key.Matches(msg, DefaultKeyMap.Quit):
 			return m, tea.Quit
-		case "up", "k":
+		case key.Matches(msg, DefaultKeyMap.Up):
 			m.HandleMoveUp()
-		case "down", "j":
+		case key.Matches(msg, DefaultKeyMap.Down):
 			m.HandleMoveDown()
-		case "enter", "right", "l": // expand directory if l or right, or toggle if enter; open file if file
-			currentDirent := m.getCurrentDirent()
-			if currentDirent.IsDir() {
-				// Expand directory
-				currentDirent.Expanded = !currentDirent.Expanded
-				// load the directory entries for the current directory
-				if currentDirent.Expanded && len(currentDirent.Dirents) == 0 {
-					currentDirent.LoadDirents()
+		case key.Matches(msg, DefaultKeyMap.JumpTop):
+			m.HandleJumpToTop()
+		case key.Matches(msg, DefaultKeyMap.JumpBottom):
+			m.HandleJumpToBottom()
+		case key.Matches(msg, DefaultKeyMap.Expand): // expand directory if l or right, or toggle if enter; open file if file only if enter
+			if m.getCurrentDirent().IsFile() && msg.String() == "enter" {
+				model, cmd := m.HandleEdit()
+				if cmd != nil {
+					return model, cmd
 				}
-			} else if currentDirent.IsFile() && msg.String() == "enter" {
-				// only enter opens file
-				c := EditorOpenFile(currentDirent.Path())
-				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
-					return nil
-				})
-				return m, cmd
+			} else if m.getCurrentDirent().IsDir() {
+				m.HandleExpand()
 			}
-		case "left", "h": // collapse directory
-			currentDirent := m.getCurrentDirent()
-			if currentDirent.IsDir() && currentDirent.Expanded {
-				currentDirent.Expanded = false
+		case key.Matches(msg, DefaultKeyMap.Collapse): // collapse directory
+			m.HandleCollapse()
+		case key.Matches(msg, DefaultKeyMap.Edit): // open file with $EDITOR; ignore if it's a directory
+			model, cmd := m.HandleEdit()
+			if cmd != nil {
+				return model, cmd
 			}
-		case "e": // open file with $EDITOR; ignore if it's a directory
-			if m.getCurrentDirent().IsFile() {
-				c := EditorOpenFile(m.getCurrentDirent().Path())
-				cmd := tea.ExecProcess(c, func(err error) tea.Msg {
-					return nil
-				})
-				return m, cmd
+			if model != nil {
+				m = *model
 			}
 		}
 	}
 	log.Printf("current cursor dir: %v, cursor: %v; direntpath: %v\n", m.currentCursorDir.Path(), m.cursor, m.getCurrentDirent().Path())
 	return m, nil
+}
+
+func (m *Model) HandleEdit() (*Model, tea.Cmd) {
+	if m.getCurrentDirent().IsFile() {
+		c := EditorOpenFile(m.getCurrentDirent().Path())
+		cmd := tea.ExecProcess(c, func(err error) tea.Msg {
+			return nil
+		})
+		return m, cmd
+	}
+	return m, nil
+}
+
+func (m *Model) HandleExpand() {
+	currentDirent := m.getCurrentDirent()
+	if currentDirent.IsDir() {
+		// Expand directory
+		currentDirent.Expanded = !currentDirent.Expanded
+		// load the directory entries for the current directory
+		if currentDirent.Expanded && len(currentDirent.Dirents) == 0 {
+			currentDirent.LoadDirents()
+		}
+	}
+}
+
+func (m *Model) HandleCollapse() {
+	currentDirent := m.getCurrentDirent()
+	if currentDirent.IsDir() && currentDirent.Expanded {
+		currentDirent.Expanded = false
+	}
 }
 
 func (m *Model) HandleMoveUp() {
@@ -157,6 +168,14 @@ func (m *Model) HandleMoveDown() {
 
 	// case 3: move within
 	m.cursor++
+}
+
+func (m Model) HandleJumpToBottom() {
+	m.cursor = len(m.currentCursorDir.Dirents) - 1
+}
+
+func (m Model) HandleJumpToTop() {
+	m.cursor = 0
 }
 
 func (m Model) View() string {

@@ -23,6 +23,9 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 
+  // load the config
+  LoadGlobalCfg()
+
 	p := tea.NewProgram(InitModel())
 	if _, err := p.Run(); err != nil {
 		log.Panicf("Error: %v\n", err)

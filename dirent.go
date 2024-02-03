@@ -6,6 +6,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/snokpok/tw/icons"
 )
 
 type Dirent struct {
@@ -67,7 +71,7 @@ func (d *Dirent) LoadDirents() {
 		})
 	}
 
-	// folders first then files
+	// folders first then files, alphabetically
 	d.Dirents = sortDirents(d.Dirents)
 
 	log.Printf("Loaded %d dirents for %s\n", len(d.Dirents), d.Path())
@@ -83,6 +87,11 @@ func sortDirents(dirents []Dirent) []Dirent {
 			files = append(files, dirent)
 		}
 	}
+
+	// sort alphabetically each dirs and files
+	alphabetNameSort(dirs)
+	alphabetNameSort(files)
+
 	finalDirs := append(dirs, files...)
 	for i := range finalDirs {
 		finalDirs[i].PosInParent = i
@@ -90,7 +99,34 @@ func sortDirents(dirents []Dirent) []Dirent {
 	return finalDirs
 }
 
+func alphabetNameSort(dirents []Dirent) {
+	sort.Slice(dirents, func(i, j int) bool {
+		return dirents[i].Name() < dirents[j].Name()
+	})
+}
+
+// get the bottom dirent in the tree
+// by following the last dirent in the list
+func (d Dirent) getBottomDirent() *Dirent {
+	if d.IsDir() && !d.Expanded || !d.IsDir() { // file or unexpanded directory
+		return &d
+	}
+	return d.Dirents[len(d.Dirents)-1].getBottomDirent()
+}
+
+func (d Dirent) getIcon() string {
+	icon, color := icons.GetIcon(
+		d.fi.Name(),
+		filepath.Ext(d.fi.Name()),
+		icons.GetIndicator(d.fi.Mode()),
+	)
+	fileIcon := lipgloss.NewStyle().Width(2).Render(fmt.Sprintf("%s%s\033[0m ", color, icon))
+  return fileIcon
+}
+
+// to print the dirent and its children if any
 func (d Dirent) Print(state Model) string {
+  config := GetGlobalCfg()
 	s := ""
 	for i := range d.Dirents {
 		// Render the dirent
@@ -113,19 +149,15 @@ func (d Dirent) Print(state Model) string {
 			cursorDisplay = teal.Render(">")
 			pathname = teal.Render(pathname)
 		}
-		s += fmt.Sprintf("%s %s%s%s", cursorDisplay, prefixspace, pathname, subdirtree)
+    fileIcon := ""
+    if config.ShowIcons {
+      fileIcon = dirent.getIcon()
+    }
+
+		s += fmt.Sprintf("%s %s%s%s%s", cursorDisplay, prefixspace, fileIcon, pathname, subdirtree)
 		if i < len(d.Dirents)-1 {
 			s += "\n"
 		}
 	}
 	return s
-}
-
-// get the bottom dirent in the tree
-// by following the last dirent in the list
-func (d Dirent) getBottomDirent() *Dirent {
-	if d.IsDir() && !d.Expanded || !d.IsDir() { // file or unexpanded directory
-		return &d
-	}
-	return d.Dirents[len(d.Dirents)-1].getBottomDirent()
 }
