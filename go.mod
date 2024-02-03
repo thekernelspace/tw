@@ -1,4 +1,4 @@
-module github.com/snokpok/tw
+module github.com/thekernelspace/tw
 
 go 1.20
 

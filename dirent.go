@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/snokpok/tw/icons"
+	"github.com/thekernelspace/tw/icons"
 )
 
 type Dirent struct {
