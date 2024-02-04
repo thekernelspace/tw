@@ -12,13 +12,19 @@ import (
 var globalConfig *Config = nil
 
 type Config struct {
-  ShowIcons bool `yaml:"show_icons"`
+  Icons string `yaml:"icons"`
 }
+
+const (
+  ICONS_NONE = "none"
+  ICONS_MONO = "mono"
+  ICONS_COLOR = "color"
+)
 
 // default options
 func NewConfig() *Config {
   return &Config{
-    ShowIcons: true,
+    Icons: ICONS_COLOR,
   }
 }
 

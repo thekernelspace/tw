@@ -114,19 +114,25 @@ func (d Dirent) getBottomDirent() *Dirent {
 	return d.Dirents[len(d.Dirents)-1].getBottomDirent()
 }
 
-func (d Dirent) getIcon() string {
+func (d Dirent) getIcon(iconMode string) string {
 	icon, color := icons.GetIcon(
 		d.fi.Name(),
 		filepath.Ext(d.fi.Name()),
 		icons.GetIndicator(d.fi.Mode()),
 	)
-	fileIcon := lipgloss.NewStyle().Width(2).Render(fmt.Sprintf("%s%s\033[0m ", color, icon))
-  return fileIcon
+	var fileIcon string
+	switch iconMode {
+	case ICONS_COLOR:
+		fileIcon = lipgloss.NewStyle().Width(2).Render(fmt.Sprintf("%s%s\033[0m ", color, icon))
+	case ICONS_MONO:
+		fileIcon = lipgloss.NewStyle().Width(2).Render(fmt.Sprintf("%s\033[0m ", icon))
+	}
+	return fileIcon
 }
 
 // to print the dirent and its children if any
 func (d Dirent) Print(state Model) string {
-  config := GetGlobalCfg()
+	config := GetGlobalCfg()
 	s := ""
 	for i := range d.Dirents {
 		// Render the dirent
@@ -149,10 +155,10 @@ func (d Dirent) Print(state Model) string {
 			cursorDisplay = teal.Render(">")
 			pathname = teal.Render(pathname)
 		}
-    fileIcon := ""
-    if config.ShowIcons {
-      fileIcon = dirent.getIcon()
-    }
+		fileIcon := ""
+		if config.Icons != ICONS_NONE {
+			fileIcon = dirent.getIcon(config.Icons)
+		}
 
 		s += fmt.Sprintf("%s %s%s%s%s", cursorDisplay, prefixspace, fileIcon, pathname, subdirtree)
 		if i < len(d.Dirents)-1 {
