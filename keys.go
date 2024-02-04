@@ -11,6 +11,7 @@ type KeyMap struct {
 	Expand     key.Binding
 	Collapse   key.Binding
 	Edit       key.Binding
+	Sniper     key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -23,8 +24,8 @@ var DefaultKeyMap = KeyMap{
 		key.WithHelp("↓/j", "move down"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "esc", "ctrl+c"),
-		key.WithHelp("q/esc/ctrl+c", "quit"),
+		key.WithKeys("q", "ctrl+c"),
+		key.WithHelp("q/ctrl+c", "quit"),
 	),
 	JumpTop: key.NewBinding(
 		key.WithKeys("g"),
@@ -45,5 +46,9 @@ var DefaultKeyMap = KeyMap{
 	Edit: key.NewBinding(
 		key.WithKeys("e"),
 		key.WithHelp("e", "edit"),
+	),
+	Sniper: key.NewBinding(
+		key.WithKeys("f"),
+		key.WithHelp("f", "sniper mode"),
 	),
 }

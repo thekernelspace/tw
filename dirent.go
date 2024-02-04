@@ -130,6 +130,21 @@ func (d Dirent) getIcon(iconMode string) string {
 	return fileIcon
 }
 
+type WalkFunc func(d Dirent)
+
+// walk through the dirent and its children
+// and call the walk function on each dirent
+// exclude the dirent if it's not expanded and is a directory
+func (d Dirent) Walk(walkFn WalkFunc) {
+	walkFn(d)
+	if !d.Expanded && d.IsDir() {
+		return
+	}
+	for i := range d.Dirents {
+		d.Dirents[i].Walk(walkFn)
+	}
+}
+
 // to print the dirent and its children if any
 func (d Dirent) Print(state Model) string {
 	config := GetGlobalCfg()
@@ -160,7 +175,16 @@ func (d Dirent) Print(state Model) string {
 			fileIcon = dirent.getIcon(config.Icons)
 		}
 
-		s += fmt.Sprintf("%s %s%s%s%s", cursorDisplay, prefixspace, fileIcon, pathname, subdirtree)
+		sniperAnnotation := ""
+		direntKeyCombo := getKeyFromDirent(dirent)
+		samePrefix := direntKeyCombo[:len(state.sniperKeyBuffer)] == state.sniperKeyBuffer
+		if state.sniper && samePrefix {
+			sniperAnnotation = fmt.Sprintf("\t[%s]", direntKeyCombo)
+			sniperAnnotation = orange.Italic(true).Render(sniperAnnotation)
+			log.Printf("sniper annotation for %s: %s\n", dirent.Path(), sniperAnnotation)
+		}
+
+		s += fmt.Sprintf("%s %s%s%s%s%s", cursorDisplay, prefixspace, fileIcon, pathname, sniperAnnotation, subdirtree)
 		if i < len(d.Dirents)-1 {
 			s += "\n"
 		}

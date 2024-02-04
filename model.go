@@ -11,6 +11,8 @@ type Model struct {
 	cursor           int
 	currentCursorDir *Dirent
 	root             Dirent
+	sniper           bool
+	sniperKeyBuffer  string // the currently pressed keys; "" if sniper mode is off or no keys are pressed, else the keys pressed so far
 }
 
 func (m Model) Init() tea.Cmd {
@@ -49,6 +51,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
+		case m.sniper:
+			if msg.String() == "enter" && m.sniperKeyBuffer != "" {
+				// as in go to the dirent that matches the key buffer
+				dirent := getDirentFromKey(m.sniperKeyBuffer)
+				if dirent != nil {
+					m.currentCursorDir = dirent.Parent
+					m.cursor = dirent.PosInParent
+					log.Printf("sniper mode: moving to dirent: %v\n", dirent.Path())
+					m.QuitSniper()
+				} else {
+					log.Printf("sniper mode: no dirent found for key: %v\n", m.sniperKeyBuffer)
+				}
+				m.QuitSniper()
+				break
+			}
+			m.sniperKeyBuffer += msg.String()
+			dirent := getDirentFromKey(m.sniperKeyBuffer)
+			if dirent != nil {
+				if dirent.IsDir() && dirent.Expanded {
+					// stall for the next hit to tab into any dirent in the expanded dir
+					break
+				}
+				m.currentCursorDir = dirent.Parent
+				m.cursor = dirent.PosInParent
+				log.Printf("sniper mode: moving to dirent: %v\n", dirent.Path())
+			} else {
+				log.Printf("sniper mode: no dirent found for key: %v\n", msg.String())
+			}
+			m.QuitSniper()
+		default:
 		case key.Matches(msg, DefaultKeyMap.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, DefaultKeyMap.Up):
@@ -78,6 +110,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if model != nil {
 				m = *model
 			}
+		case key.Matches(msg, DefaultKeyMap.Sniper):
+			m.ToggleSniper()
 		}
 	}
 	log.Printf("current cursor dir: %v, cursor: %v; direntpath: %v\n", m.currentCursorDir.Path(), m.cursor, m.getCurrentDirent().Path())
@@ -170,11 +204,11 @@ func (m *Model) HandleMoveDown() {
 	m.cursor++
 }
 
-func (m Model) HandleJumpToBottom() {
+func (m *Model) HandleJumpToBottom() {
 	m.cursor = len(m.currentCursorDir.Dirents) - 1
 }
 
-func (m Model) HandleJumpToTop() {
+func (m *Model) HandleJumpToTop() {
 	m.cursor = 0
 }
 
