@@ -23,8 +23,8 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 
-  // load the config
-  LoadGlobalCfg()
+	// load the config
+	LoadGlobalCfg()
 
 	p := tea.NewProgram(InitModel())
 	if _, err := p.Run(); err != nil {

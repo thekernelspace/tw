@@ -20,5 +20,5 @@ func getFi(path string) fs.FileInfo {
 	if err != nil {
 		log.Panicf("Error: %v\n", err)
 	}
-  return fi
+	return fi
 }

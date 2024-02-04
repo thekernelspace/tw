@@ -8,9 +8,9 @@ type KeyMap struct {
 	Quit       key.Binding
 	JumpTop    key.Binding
 	JumpBottom key.Binding
-  Expand     key.Binding
-  Collapse   key.Binding
-  Edit       key.Binding
+	Expand     key.Binding
+	Collapse   key.Binding
+	Edit       key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -34,16 +34,16 @@ var DefaultKeyMap = KeyMap{
 		key.WithKeys("G"),
 		key.WithHelp("G", "jump to bottom"),
 	),
-  Expand: key.NewBinding(
-    key.WithKeys("enter", "right", "l"),
-    key.WithHelp("enter", "expand"),
-  ),
-  Collapse: key.NewBinding(
-    key.WithKeys("backspace", "left", "h"),
-    key.WithHelp("backspace", "collapse"),
-  ),
-  Edit: key.NewBinding(
-    key.WithKeys("e"),
-    key.WithHelp("e", "edit"),
-  ),
+	Expand: key.NewBinding(
+		key.WithKeys("enter", "right", "l"),
+		key.WithHelp("enter", "expand"),
+	),
+	Collapse: key.NewBinding(
+		key.WithKeys("backspace", "left", "h"),
+		key.WithHelp("backspace", "collapse"),
+	),
+	Edit: key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("e", "edit"),
+	),
 }
