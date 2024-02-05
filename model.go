@@ -19,8 +19,8 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func InitModel() Model {
-	fi := getFi(".")
+func InitModel(dirpath string) Model {
+	fi := getFi(dirpath)
 	root := Dirent{
 		fi:       fi,
 		Level:    0,

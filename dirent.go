@@ -24,8 +24,7 @@ type Dirent struct {
 
 func (d Dirent) Path() string {
 	if d.Parent == nil {
-		abspath, _ := filepath.Abs(d.fi.Name())
-		return abspath
+		return rootDirpath
 	}
 	abspath := filepath.Join(d.Parent.Path(), d.fi.Name())
 	return abspath
@@ -63,7 +62,9 @@ func (d *Dirent) LoadDirents() {
 		log.Panicf("Error: %v\n", err)
 	}
 
-	ignore, errGitignore := gitignore.NewFromFile(".gitignore")
+	// get the gitignore relative to the current dirent if any
+	relativeGitignorePath := filepath.Join(d.Path(), ".gitignore")
+	ignore, errGitignore := gitignore.NewFromFile(relativeGitignorePath)
 
 	for pos, fi := range fileInfos {
 		// don't take the ones matched by ignore patterns

@@ -4,11 +4,14 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 var DEBUG = os.Getenv("DEBUG") != ""
+
+var rootDirpath string
 
 func main() {
 	if DEBUG {
@@ -26,7 +29,17 @@ func main() {
 	// load the config
 	LoadGlobalCfg()
 
-	p := tea.NewProgram(InitModel())
+	// if specified an arg then use that dir
+	rootDirpath = "."
+	if len(os.Args) > 1 {
+		rootDirpath = os.Args[1]
+	}
+	if !filepath.IsAbs(rootDirpath) {
+		cwd, _ := os.Getwd()
+		rootDirpath = filepath.Join(cwd, rootDirpath)
+	}
+
+	p := tea.NewProgram(InitModel(rootDirpath))
 	if _, err := p.Run(); err != nil {
 		log.Panicf("Error: %v\n", err)
 		os.Exit(1)
