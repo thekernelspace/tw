@@ -12,7 +12,8 @@ import (
 var globalConfig *Config = nil
 
 type Config struct {
-	Icons string `yaml:"icons"`
+	Icons      string `yaml:"icons"`
+	ShowHidden bool   `yaml:"show_hidden"`
 }
 
 const (
@@ -24,7 +25,8 @@ const (
 // default options
 func NewConfig() *Config {
 	return &Config{
-		Icons: ICONS_COLOR,
+		Icons:      ICONS_COLOR,
+		ShowHidden: false,
 	}
 }
 

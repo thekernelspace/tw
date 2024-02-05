@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/denormal/go-gitignore"
 	"github.com/thekernelspace/tw/icons"
 )
 
@@ -61,14 +62,34 @@ func (d *Dirent) LoadDirents() {
 	if err != nil {
 		log.Panicf("Error: %v\n", err)
 	}
+
+	ignore, errGitignore := gitignore.NewFromFile(".gitignore")
+
 	for pos, fi := range fileInfos {
-		d.Dirents = append(d.Dirents, Dirent{
+		// don't take the ones matched by ignore patterns
+		fidirent := Dirent{
 			fi:          fi,
 			Level:       d.Level + 1,
 			Parent:      d,
 			PosInParent: pos,
 			Expanded:    false, // don't show by default
-		})
+		}
+
+		if !globalConfig.ShowHidden {
+			if isObliviousPattern(fidirent.fi) {
+				continue
+			}
+			if errGitignore == nil {
+				match := ignore.Match(fidirent.Path())
+				if match != nil {
+					if match.Ignore() {
+						log.Printf("Ignoring %s\n", fidirent.Path())
+						continue
+					}
+				}
+			}
+		}
+		d.Dirents = append(d.Dirents, fidirent)
 	}
 
 	// folders first then files, alphabetically

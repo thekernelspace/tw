@@ -6,6 +6,15 @@ import (
 	"os"
 )
 
+// these are files like .git/ that are not included in the .gitignore
+// but should be ignored
+func isObliviousPattern(fi fs.FileInfo) bool {
+	if fi.IsDir() && fi.Name() == ".git" {
+		return true
+	}
+	return false
+}
+
 // retrieve file info from the path
 func getFi(path string) fs.FileInfo {
 	// get the directory entries for the current directory
