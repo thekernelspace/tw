@@ -75,6 +75,12 @@ func (d *Dirent) LoadDirents() {
 			Expanded:    false, // don't show by default
 		}
 
+		// make exception for test-folder/ lol in DEBUG MODE ONLY
+		if DEBUG && fidirent.Name() == "test-folder" && fidirent.IsDir() {
+			d.Dirents = append(d.Dirents, fidirent)
+			continue
+		}
+
 		if !globalConfig.ShowHidden {
 			if isObliviousPattern(fidirent.fi) {
 				continue
@@ -179,7 +185,7 @@ func (d Dirent) Print(state Model) string {
 		}
 		// load the children in case the dirent is expanded
 		subdirtree := ""
-		if dirent.Expanded {
+		if dirent.Expanded && len(dirent.Dirents) > 0 {
 			subdirtree += "\n" + dirent.Print(state)
 		}
 		prefixspace := ""

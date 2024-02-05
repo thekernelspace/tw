@@ -98,7 +98,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return model, cmd
 				}
 			} else if m.getCurrentDirent().IsDir() {
-				m.HandleExpand()
+				m.HandleExpand(msg)
 			}
 		case key.Matches(msg, DefaultKeyMap.Collapse): // collapse directory
 			m.HandleCollapse()
@@ -129,15 +129,17 @@ func (m *Model) HandleEdit() (*Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) HandleExpand() {
+func (m *Model) HandleExpand(msg tea.KeyMsg) {
 	currentDirent := m.getCurrentDirent()
-	if currentDirent.IsDir() {
+	if msg.String() == "l" && currentDirent.IsDir() && currentDirent.Expanded {
+		return // l = expand only
+	}
+	if len(currentDirent.Dirents) == 0 {
+		currentDirent.LoadDirents()
+	}
+	if currentDirent.IsDir() && len(currentDirent.Dirents) > 0 {
 		// Expand directory
 		currentDirent.Expanded = !currentDirent.Expanded
-		// load the directory entries for the current directory
-		if currentDirent.Expanded && len(currentDirent.Dirents) == 0 {
-			currentDirent.LoadDirents()
-		}
 	}
 }
 
@@ -163,17 +165,26 @@ func (m *Model) HandleMoveUp() {
 		return
 	}
 
-	// case 2: move within from the next dirent it's pointing to
-	direntAboveCurrent := m.currentCursorDir.Dirents[m.cursor-1]
-	if direntAboveCurrent.IsDir() && direntAboveCurrent.Expanded {
-		log.Printf("moving in to %v; cursor new: %v\n", direntAboveCurrent.Path(), len(direntAboveCurrent.Dirents)-1)
-		m.cursor = len(direntAboveCurrent.Dirents) - 1
-		m.currentCursorDir = &direntAboveCurrent
+	// case 2: move in to the above dirent
+	direntAbove := m.currentCursorDir.Dirents[m.cursor-1]
+	if direntAbove.IsDir() && direntAbove.Expanded {
+		// find the bottom one in this dir
+		target := direntAbove.getBottomDirent()
+		m.cursor = target.PosInParent
+		m.currentCursorDir = target.Parent
+		log.Printf("moving in to %v; cursor new: %v\n", m.currentCursorDir, m.cursor)
 		return
 	}
 
 	// in middle of the current directory
 	m.cursor--
+}
+
+func (d Dirent) getClosestSuccessor() *Dirent {
+	if d.PosInParent+1 >= len(d.Parent.Dirents) {
+		return d.Parent.getClosestSuccessor()
+	}
+	return &d.Parent.Dirents[d.PosInParent+1]
 }
 
 func (m *Model) HandleMoveDown() {
@@ -194,9 +205,10 @@ func (m *Model) HandleMoveDown() {
 			m.cursor = 0
 			return
 		}
-		// there's a parent so move out
-		m.cursor = m.currentCursorDir.PosInParent + 1
-		m.currentCursorDir = m.currentCursorDir.Parent
+		// move out to the closest ancestor with a posInParent + 1 that's still in bound
+		closestSucc := m.currentCursorDir.getClosestSuccessor()
+		m.cursor = closestSucc.PosInParent
+		m.currentCursorDir = closestSucc.Parent
 		return
 	}
 
